@@ -31,6 +31,24 @@ SDL_Texture* loadTexture(std::string fileName, SDL_Renderer* pRenderer)
 	return pTexture; //save texture.
 }
 
+void drawFrameScl(SDL_Texture* textureMap, int x, int y, int srcWidth, int srcHeight, int destWidth, int destHeight, int currentRow, int currentFrame, SDL_Renderer *pRenderer, double angle, int alpha, SDL_RendererFlip flip)
+{
+	SDL_Rect srcRect; //source rectangle
+	SDL_Rect destRect; //destination rectangle
+
+	srcRect.x = srcWidth * currentFrame;
+	srcRect.y = srcHeight * (currentRow);
+	srcRect.w = srcWidth;
+	destRect.w = destWidth;
+	srcRect.h = srcHeight;
+	destRect.h = destHeight;
+	destRect.x = x;
+	destRect.y = y;
+
+	SDL_SetTextureAlphaMod(textureMap, alpha);
+	SDL_RenderCopyEx(pRenderer, textureMap, &srcRect, &destRect, angle, 0, flip); //Load current frame on the buffer game.
+}
+
 // SOUND / MUSIC
 Mix_Music* loadMusic(std::string fileName)
 {
@@ -101,10 +119,10 @@ class PLAYER {
 public:
 
 	float dx, dy;
-	SDL_Rect rect; //position of the sprite
+	SDL_FRect rect; //position of the sprite
 	bool onGround;
 	SDL_Texture* sprite;
-	SDL_Rect imgRect; //source of the image
+	SDL_FRect imgRect; //source of the image
 	float currentFrame;
 
 	PLAYER(std::string image)
@@ -133,8 +151,8 @@ public:
 		currentFrame += time * 0.005;
 		if (currentFrame > 3) currentFrame -= 3;
 
-		if (dx > 0) imgRect = { 112 + 31 * int(currentFrame), 155, 16,16 };
-		if (dx < 0) imgRect = { 112 + 31 * int(currentFrame) + 16, 144, -16, 16 };
+		if (dx > 0) imgRect = { (float)112 + 31 * int(currentFrame), (float)155, (float)16,(float)16 };
+		if (dx < 0) imgRect = { (float)112 + 31 * int(currentFrame) + 16, (float)144, (float)-16, (float)16 };
 
 		rect.x = rect.x - offsetX;
 		rect.y = rect.y - offsetY;
@@ -182,9 +200,9 @@ class ENEMY
 
 public:
 	float dx, dy;
-	SDL_Rect rect;
+	SDL_FRect rect;
 	SDL_Texture* sprite;
-	SDL_Rect imgRect;
+	SDL_FRect imgRect;
 	float currentFrame;
 	bool life;
 
@@ -192,7 +210,7 @@ public:
 	void set(std::string image, int x, int y)
 	{
 		sprite = loadTexture(image, g_pRenderer);
-		rect = { x, y, 16, 16 };
+		rect = { (float)x, (float)y, (float)16, (float)16 };
 
 		dx = 0.05;
 		currentFrame = 0;
@@ -209,7 +227,7 @@ public:
 		currentFrame += time * 0.005;
 		if (currentFrame > 2) currentFrame -= 2;
 
-		imgRect = { 18 * int(currentFrame), 0, 16, 16 };
+		imgRect = { (float)18 * int(currentFrame), (float)0, (float)16, 16.0 };
 		if (!life) imgRect = { 58, 0, 16, 16 };
 
 		rect.x = rect.x - offsetX;
@@ -291,6 +309,7 @@ int main(int argc, char* args[])
 
 	//music and sound
 	Mix_Music* music = loadMusic("mario_theme.ogg");
+	Mix_PlayMusic(music, 1);
 	Mix_Chunk* jumpSound = loadSound("jump.ogg");
 	
 	srand(time(NULL));
@@ -301,6 +320,7 @@ int main(int argc, char* args[])
 	{
 		frameStart = SDL_GetTicks(); //tiempo inicial
 
+		//input handler
 		SDL_Event event;
 		while (SDL_PollEvent(&event))
 		{
@@ -340,10 +360,24 @@ int main(int argc, char* args[])
 			}
 		}
 
+
+		//update
 		Mario.update(1);
 		enemy.update(1);
 
-		if ( SDL_HasIntersection(&Mario.rect, &enemy.rect) )
+		SDL_Rect iMarioRect;
+		iMarioRect.x = Mario.rect.x;
+		iMarioRect.y = Mario.rect.y;
+		iMarioRect.w = Mario.rect.w;
+		iMarioRect.h = Mario.rect.h;
+
+		SDL_Rect iEnemyRect;
+		iEnemyRect.x = enemy.rect.x;
+		iEnemyRect.y = enemy.rect.y;
+		iEnemyRect.w = enemy.rect.w;
+		iEnemyRect.h = enemy.rect.h;
+
+		if ( SDL_HasIntersection(&iMarioRect, &iEnemyRect) )
 		{
 			if (enemy.life)
 			{
@@ -354,8 +388,44 @@ int main(int argc, char* args[])
 
 		if (Mario.rect.x > 200) offsetX = Mario.rect.x - 200;
 
+
+		//draw
 		SDL_SetRenderDrawColor(g_pRenderer, 107, 140, 255, 255);
 		SDL_RenderClear(g_pRenderer);
+
+		//draw background
+		/*for (int i = 0; i < H; i++)
+			for (int j = 0; j < W; j++)
+			{
+				if (TileMap[i][j] == 'P')  tile.setTextureRect(IntRect(143 - 16 * 3, 112, 16, 16));
+
+				if (TileMap[i][j] == 'k')  tile.setTextureRect(IntRect(143, 112, 16, 16));
+
+				if (TileMap[i][j] == 'c')  tile.setTextureRect(IntRect(143 - 16, 112, 16, 16));
+
+				if (TileMap[i][j] == 't')  tile.setTextureRect(IntRect(0, 47, 32, 95 - 47));
+
+				if (TileMap[i][j] == 'g')  tile.setTextureRect(IntRect(0, 16 * 9 - 5, 3 * 16, 16 * 2 + 5));
+
+				if (TileMap[i][j] == 'G')  tile.setTextureRect(IntRect(145, 222, 222 - 145, 255 - 222));
+
+				if (TileMap[i][j] == 'd')  tile.setTextureRect(IntRect(0, 106, 74, 127 - 106));
+
+				if (TileMap[i][j] == 'w')  tile.setTextureRect(IntRect(99, 224, 140 - 99, 255 - 224));
+
+				if (TileMap[i][j] == 'r')  tile.setTextureRect(IntRect(143 - 32, 112, 16, 16));
+
+				if ((TileMap[i][j] == ' ') || (TileMap[i][j] == '0')) continue;
+
+				tile.setPosition(j * 16 - offsetX, i * 16 - offsetY);
+				window.draw(tile);
+			}*/
+
+		//draw Mario
+		drawFrameScl(Mario.sprite, Mario.imgRect.x, Mario.imgRect.y, Mario.imgRect.w, Mario.imgRect.h, Mario.rect.w, Mario.rect.h, 0, 0, g_pRenderer, 0.0, 255, SDL_FLIP_NONE);
+
+		//draw Enemy
+		drawFrameScl(enemy.sprite, enemy.imgRect.x, enemy.imgRect.y, enemy.imgRect.w, enemy.imgRect.h, enemy.rect.w, enemy.rect.h, 0, 0, g_pRenderer, 0.0, 255, SDL_FLIP_NONE);
 
 		SDL_RenderPresent(g_pRenderer); // draw to the screen
 
