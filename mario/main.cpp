@@ -1,39 +1,376 @@
 #include<SDL.h>
+#include<SDL_image.h>
+#include<SDL_mixer.h>
+#include<iostream>
+#include<string>
+#include<time.h>
 
 SDL_Window* g_pWindow = 0;
 SDL_Renderer* g_pRenderer = 0;
 
+SDL_Texture* loadTexture(std::string fileName, SDL_Renderer* pRenderer)
+{
+	SDL_Surface* pTempSurface = IMG_Load(fileName.c_str()); //create Surface with contents of fileName
+
+	if (pTempSurface == 0) //exception handle load error
+	{
+		std::cout << "error loading file: " << fileName << std::endl;
+		std::cout << SDL_GetError() << " " << fileName << std::endl;
+		return false;
+	}
+
+	SDL_Texture* pTexture = SDL_CreateTextureFromSurface(pRenderer, pTempSurface); //Pass Surface to Texture
+	SDL_FreeSurface(pTempSurface); //Delete Surface
+
+	if (pTexture == 0) //exception handle transiction Surfacte to Texture
+	{
+		std::cout << "error creating Texture of file: " << fileName << std::endl;
+		return false;
+	}
+
+	return pTexture; //save texture.
+}
+
+// SOUND / MUSIC
+Mix_Music* loadMusic(std::string fileName)
+{
+	Mix_Music* pMusic = Mix_LoadMUS(fileName.c_str());
+	if (pMusic == 0)
+	{
+		std::cout << "Could not load music: ERROR - " << Mix_GetError() << std::endl;
+		return false;
+	}
+
+	return pMusic;
+}
+
+
+Mix_Chunk* loadSound(std::string fileName)
+{
+	Mix_Chunk* pChunk = Mix_LoadWAV(fileName.c_str());
+	if (pChunk == 0)
+	{
+		std::cout << "Could not load SFX: ERROR - " << Mix_GetError() << std::endl;
+		return false;
+	}
+
+	return pChunk;
+}
+
+//void playMusic(Mix_Music* mu, int loop)
+//{
+//	Mix_PlayMusic(m_music[id], loop);
+//}
+//
+//void AssetsManager::playSound(std::string id, int loop)
+//{
+//	Mix_PlayChannel(-1, m_sfxs[id], loop);
+//}
+
+bool isRunning = true;
+
+float offsetX = 0, offsetY = 0;
+
+
+const int H = 17;
+const int W = 150;
+
+
+std::string TileMap[H] = {
+"000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+"0                                                                                                                                                    0",
+"0                                                                                    w                                                               0",
+"0                   w                                  w                   w                                                                         0",
+"0                                      w                                       kk                                                                    0",
+"0                                                                             k  k    k    k                                                         0",
+"0                      c                                                      k      kkk  kkk  w                                                     0",
+"0                                                                       r     k       k    k                                                         0",
+"0                                                                      rr     k  k                                                                   0",
+"0                                                                     rrr      kk                                                                    0",
+"0               c    kckck                                           rrrr                                                                            0",
+"0                                      t0                           rrrrr                                                                            0",
+"0G                                     00              t0          rrrrrr            G                                                               0",
+"0           d    g       d             00              00         rrrrrrr                                                                            0",
+"PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP",
+"PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP",
+"PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP",
+};
+
+class PLAYER {
+
+public:
+
+	float dx, dy;
+	SDL_Rect rect; //position of the sprite
+	bool onGround;
+	SDL_Texture* sprite;
+	SDL_Rect imgRect; //source of the image
+	float currentFrame;
+
+	PLAYER(std::string image)
+	{
+		sprite = loadTexture(image, g_pRenderer);
+		rect = { 100, 180, 16, 16 };
+
+		dx = dy = 0.1;
+		currentFrame = 0;
+	}
+
+
+	void update(float time)
+	{
+
+		rect.x += dx * time;
+		Collision(0);
+
+
+		if (!onGround) dy = dy + 0.0005*time;
+		rect.y += dy * time;
+		onGround = false;
+		Collision(1);
+
+
+		currentFrame += time * 0.005;
+		if (currentFrame > 3) currentFrame -= 3;
+
+		if (dx > 0) imgRect = { 112 + 31 * int(currentFrame), 155, 16,16 };
+		if (dx < 0) imgRect = { 112 + 31 * int(currentFrame) + 16, 144, -16, 16 };
+
+		rect.x = rect.x - offsetX;
+		rect.y = rect.y - offsetY;
+
+		dx = 0;
+	}
+
+
+	void Collision(int num)
+	{
+
+		for (int i = rect.y / 16; i < (rect.y + rect.h) / 16; i++)
+			for (int j = rect.x / 16; j < (rect.x + rect.w) / 16; j++)
+			{
+				if ((TileMap[i][j] == 'P') || (TileMap[i][j] == 'k') || (TileMap[i][j] == '0') || (TileMap[i][j] == 'r') || (TileMap[i][j] == 't'))
+				{
+					if (dy > 0 && num == 1)
+					{
+						rect.y = i * 16 - rect.h;  dy = 0;   onGround = true;
+					}
+					if (dy < 0 && num == 1)
+					{
+						rect.y = i * 16 + 16;   dy = 0;
+					}
+					if (dx > 0 && num == 0)
+					{
+						rect.x = j * 16 - rect.w;
+					}
+					if (dx < 0 && num == 0)
+					{
+						rect.x = j * 16 + 16;
+					}
+				}
+
+				if (TileMap[i][j] == 'c') {
+					// TileMap[i][j]=' '; 
+				}
+			}
+	}
+
+};
+
+class ENEMY
+{
+
+public:
+	float dx, dy;
+	SDL_Rect rect;
+	SDL_Texture* sprite;
+	SDL_Rect imgRect;
+	float currentFrame;
+	bool life;
+
+
+	void set(std::string image, int x, int y)
+	{
+		sprite = loadTexture(image, g_pRenderer);
+		rect = { x, y, 16, 16 };
+
+		dx = 0.05;
+		currentFrame = 0;
+		life = true;
+	}
+
+	void update(float time)
+	{
+		rect.x += dx * time;
+
+		Collision();
+
+
+		currentFrame += time * 0.005;
+		if (currentFrame > 2) currentFrame -= 2;
+
+		imgRect = { 18 * int(currentFrame), 0, 16, 16 };
+		if (!life) imgRect = { 58, 0, 16, 16 };
+
+		rect.x = rect.x - offsetX;
+		rect.y = rect.y - offsetY;
+
+	}
+
+
+	void Collision()
+	{
+
+		for (int i = rect.y / 16; i < (rect.y + rect.h) / 16; i++)
+			for (int j = rect.x / 16; j < (rect.x + rect.w) / 16; j++)
+				if ((TileMap[i][j] == 'P') || (TileMap[i][j] == '0'))
+				{
+					if (dx > 0)
+					{
+						rect.x = j * 16 - rect.w; dx *= -1;
+					}
+					else if (dx < 0)
+					{
+						rect.x = j * 16 + 16;  dx *= -1;
+					}
+
+				}
+	}
+
+};
+
+const int FPS = 60;
+const int DELAY_TIME = 1000.0f / FPS;
+
 int main(int argc, char* args[])
 {
-	// initialize SDL
-	if (SDL_Init(SDL_INIT_EVERYTHING) >= 0)
+	// attempt to initialize SDL
+	if (SDL_Init(SDL_INIT_EVERYTHING) == 0)
 	{
-		// if succeeded create our window
-		g_pWindow = SDL_CreateWindow("Chapter 1: Setting up SDL",
-			SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-			640, 480,
-			SDL_WINDOW_SHOWN);
-		// if the window creation succeeded create our renderer
-		if (g_pWindow != 0)
+		int flags = 0;
+
+		std::cout << "SDL init success\n";
+		// init the window
+		g_pWindow = SDL_CreateWindow("Mario platformer", 100, 100,
+			400, 250, flags);
+		if (g_pWindow != 0) // window init success
 		{
+			std::cout << "window creation success\n";
 			g_pRenderer = SDL_CreateRenderer(g_pWindow, -1, 0);
+			if (g_pRenderer != 0) // renderer init success
+			{
+				std::cout << "renderer creation success\n";
+				SDL_SetRenderDrawColor(g_pRenderer,
+					255, 255, 255, 255);
+			}
+			else
+			{
+				std::cout << "renderer init fail\n";
+				return false; // renderer init fail
+			}
+		}
+		else
+		{
+			std::cout << "window init fail\n";
+			return false; // window init fail
 		}
 	}
 	else
 	{
-		return 1; // sdl could not initialize
+		std::cout << "SDL init fail\n";
+		return false; // SDL init fail
 	}
-	// everything succeeded lets draw the window
-	// set to black // This function expects Red, Green, Blue and
-	// Alpha as color values
-	SDL_SetRenderDrawColor(g_pRenderer, 0, 0, 0, 255);
-	// clear the window to black
-	SDL_RenderClear(g_pRenderer);
-	// show the window
-	SDL_RenderPresent(g_pRenderer);
-	// set a delay before quitting
-	SDL_Delay(5000);
-	// clean up SDL
-	SDL_Quit();
+
+	//player and enemy
+	PLAYER Mario("mario_tileset.png");
+	ENEMY  enemy;
+	enemy.set("mario_tileset.png", 48 * 16, 13 * 16);
+
+	//scenery
+	SDL_Texture* tile = loadTexture("mario_tileset.png", g_pRenderer);
+
+	//music and sound
+	Mix_Music* music = loadMusic("mario_theme.ogg");
+	Mix_Chunk* jumpSound = loadSound("jump.ogg");
+	
+	srand(time(NULL));
+
+	Uint32 frameStart, frameTime;
+
+	while (isRunning)
+	{
+		frameStart = SDL_GetTicks(); //tiempo inicial
+
+		SDL_Event event;
+		while (SDL_PollEvent(&event))
+		{
+			switch (event.type)
+			{
+			case SDL_QUIT:
+				isRunning = false;
+				break;
+
+			case SDL_KEYDOWN:
+				switch (event.key.keysym.sym)
+				{
+				case SDLK_LEFT:
+					Mario.dx = -0.1;
+					break;
+				case SDLK_RIGHT:
+					Mario.dx = 0.1;
+					break;
+				case SDLK_UP:
+					if (Mario.onGround)
+					{
+						Mario.dy = -0.27;
+						Mario.onGround = false;
+						Mix_PlayChannel(-1, jumpSound, 0);
+					}
+					break;
+				default:
+					break;
+				}
+				break;
+
+			case SDL_KEYUP:
+				break;
+
+			default:
+				break;
+			}
+		}
+
+		Mario.update(1);
+		enemy.update(1);
+
+		if ( SDL_HasIntersection(&Mario.rect, &enemy.rect) )
+		{
+			if (enemy.life)
+			{
+				if (Mario.dy > 0) { enemy.dx = 0; Mario.dy = -0.2; enemy.life = false; }
+				else SDL_SetTextureColorMod(Mario.sprite, 255, 0, 0);
+			}
+		}
+
+		if (Mario.rect.x > 200) offsetX = Mario.rect.x - 200;
+
+		SDL_SetRenderDrawColor(g_pRenderer, 107, 140, 255, 255);
+		SDL_RenderClear(g_pRenderer);
+
+		SDL_RenderPresent(g_pRenderer); // draw to the screen
+
+		frameTime = SDL_GetTicks() - frameStart; //tiempo final - tiempo inicial
+
+		if (frameTime < DELAY_TIME)
+		{
+			//con tiempo fijo el retraso es 1000 / 60 = 16,66
+			//procesar handleEvents, update y render tarda 1, y hay que esperar 15
+			//cout << "frameTime : " << frameTime << "  delay : " << (int)(DELAY_TIME - frameTime) << endl;
+			SDL_Delay((int)(DELAY_TIME - frameTime)); //esperamos hasta completar los 60 fps
+		}
+	}
+	
+	std::cout << "game closing...\n";
+
 	return 0;
 }
