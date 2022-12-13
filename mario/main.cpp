@@ -322,9 +322,11 @@ int main(int argc, char* args[])
 	SDL_Texture* tile = loadTexture("mario_tileset.png", g_pRenderer);
 
 	//music and sound
-	Mix_Music* music = loadMusic("mario_theme.ogg");
+	Mix_OpenAudio(22050, AUDIO_S16, 2, (4096 / 2));
+	Mix_Volume(-1, 16); //adjust sound/music volume for all channels
+	Mix_Music* music = loadMusic("Mario_Theme.ogg");
 	Mix_PlayMusic(music, 1);
-	Mix_Chunk* jumpSound = loadSound("jump.ogg");
+	Mix_Chunk* jumpSound = loadSound("Jump.wav");
 	
 	srand(time(NULL));
 
@@ -482,6 +484,7 @@ int main(int argc, char* args[])
 	}
 	
 	std::cout << "game closing...\n";
+	Mix_CloseAudio();
 
 	return 0;
 }
