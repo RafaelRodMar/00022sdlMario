@@ -31,13 +31,13 @@ SDL_Texture* loadTexture(std::string fileName, SDL_Renderer* pRenderer)
 	return pTexture; //save texture.
 }
 
-void drawFrameScl(SDL_Texture* textureMap, int x, int y, int srcWidth, int srcHeight, int destWidth, int destHeight, int currentRow, int currentFrame, SDL_Renderer *pRenderer, double angle, int alpha, SDL_RendererFlip flip)
+void drawFrameScl(SDL_Texture* textureMap, int x, int y, int srcWidth, int srcHeight, int destWidth, int destHeight, SDL_Renderer *pRenderer, double angle, int alpha, SDL_RendererFlip flip)
 {
 	SDL_Rect srcRect; //source rectangle
 	SDL_Rect destRect; //destination rectangle
 
-	srcRect.x = srcWidth * currentFrame;
-	srcRect.y = srcHeight * (currentRow);
+	srcRect.x = srcWidth;
+	srcRect.y = srcHeight;
 	srcRect.w = srcWidth;
 	destRect.w = destWidth;
 	srcRect.h = srcHeight;
@@ -75,15 +75,26 @@ Mix_Chunk* loadSound(std::string fileName)
 	return pChunk;
 }
 
-//void playMusic(Mix_Music* mu, int loop)
-//{
-//	Mix_PlayMusic(m_music[id], loop);
-//}
-//
-//void AssetsManager::playSound(std::string id, int loop)
-//{
-//	Mix_PlayChannel(-1, m_sfxs[id], loop);
-//}
+
+// keyboard specific
+const Uint8* m_keystates;
+
+bool isKeyDown(SDL_Scancode key)
+{
+	if (m_keystates != 0)
+	{
+		if (m_keystates[key] == 1)
+		{
+			return true;
+		}
+		else
+		{
+			return false;
+		}
+	}
+
+	return false;
+}
 
 bool isRunning = true;
 
@@ -124,6 +135,7 @@ public:
 	SDL_Texture* sprite;
 	SDL_FRect imgRect; //source of the image
 	float currentFrame;
+	bool flip = false;
 
 	PLAYER(std::string image)
 	{
@@ -151,8 +163,10 @@ public:
 		currentFrame += time * 0.005;
 		if (currentFrame > 3) currentFrame -= 3;
 
-		if (dx > 0) imgRect = { (float)112 + 31 * int(currentFrame), (float)155, (float)16,(float)16 };
-		if (dx < 0) imgRect = { (float)112 + 31 * int(currentFrame) + 16, (float)144, (float)-16, (float)16 };
+		imgRect = { (float)(112 + 31 * int(currentFrame)), 144, 16,16 };
+		if (dx > 0) flip = false;
+		if (dx < 0) flip = true;
+		if (dx == 0) imgRect = { 80, 144, 16, 16 };
 
 		rect.x = rect.x - offsetX;
 		rect.y = rect.y - offsetY;
@@ -315,7 +329,7 @@ int main(int argc, char* args[])
 	srand(time(NULL));
 
 	Uint32 frameStart, frameTime;
-
+	
 	while (isRunning)
 	{
 		frameStart = SDL_GetTicks(); //tiempo inicial
@@ -331,28 +345,11 @@ int main(int argc, char* args[])
 				break;
 
 			case SDL_KEYDOWN:
-				switch (event.key.keysym.sym)
-				{
-				case SDLK_LEFT:
-					Mario.dx = -0.1;
-					break;
-				case SDLK_RIGHT:
-					Mario.dx = 0.1;
-					break;
-				case SDLK_UP:
-					if (Mario.onGround)
-					{
-						Mario.dy = -0.27;
-						Mario.onGround = false;
-						Mix_PlayChannel(-1, jumpSound, 0);
-					}
-					break;
-				default:
-					break;
-				}
+				m_keystates = SDL_GetKeyboardState(0);
 				break;
 
 			case SDL_KEYUP:
+				m_keystates = SDL_GetKeyboardState(0);
 				break;
 
 			default:
@@ -360,10 +357,22 @@ int main(int argc, char* args[])
 			}
 		}
 
+		if (isKeyDown(SDL_SCANCODE_LEFT)) Mario.dx = -0.1;
+		if (isKeyDown(SDL_SCANCODE_RIGHT)) Mario.dx = 0.1;
+		if (isKeyDown(SDL_SCANCODE_UP))
+		{
+			if (Mario.onGround)
+			{
+				Mario.dy = -0.27;
+				Mario.onGround = false;
+				Mix_PlayChannel(-1, jumpSound, 0);
+			}
+		}
+
 
 		//update
-		Mario.update(1);
-		enemy.update(1);
+		Mario.update(20);
+		enemy.update(20);
 
 		SDL_Rect iMarioRect;
 		iMarioRect.x = Mario.rect.x;
@@ -394,38 +403,70 @@ int main(int argc, char* args[])
 		SDL_RenderClear(g_pRenderer);
 
 		//draw background
-		/*for (int i = 0; i < H; i++)
+		SDL_Rect srcTile, destTile;
+		for (int i = 0; i < H; i++)
 			for (int j = 0; j < W; j++)
 			{
-				if (TileMap[i][j] == 'P')  tile.setTextureRect(IntRect(143 - 16 * 3, 112, 16, 16));
+				if (TileMap[i][j] == 'P')  srcTile = { 143 - 16 * 3, 112, 16, 16 };
 
-				if (TileMap[i][j] == 'k')  tile.setTextureRect(IntRect(143, 112, 16, 16));
+				if (TileMap[i][j] == 'k')  srcTile = { 143, 112, 16, 16 };
 
-				if (TileMap[i][j] == 'c')  tile.setTextureRect(IntRect(143 - 16, 112, 16, 16));
+				if (TileMap[i][j] == 'c')  srcTile = { 143 - 16, 112, 16, 16 };
 
-				if (TileMap[i][j] == 't')  tile.setTextureRect(IntRect(0, 47, 32, 95 - 47));
+				if (TileMap[i][j] == 't')  srcTile = { 0, 47, 32, 95 - 47 };
 
-				if (TileMap[i][j] == 'g')  tile.setTextureRect(IntRect(0, 16 * 9 - 5, 3 * 16, 16 * 2 + 5));
+				if (TileMap[i][j] == 'g')  srcTile = { 0, 16 * 9 - 5, 3 * 16, 16 * 2 + 5 };
 
-				if (TileMap[i][j] == 'G')  tile.setTextureRect(IntRect(145, 222, 222 - 145, 255 - 222));
+				if (TileMap[i][j] == 'G')  srcTile = { 145, 222, 222 - 145, 255 - 222 };
 
-				if (TileMap[i][j] == 'd')  tile.setTextureRect(IntRect(0, 106, 74, 127 - 106));
+				if (TileMap[i][j] == 'd')  srcTile = { 0, 106, 74, 127 - 106 };
 
-				if (TileMap[i][j] == 'w')  tile.setTextureRect(IntRect(99, 224, 140 - 99, 255 - 224));
+				if (TileMap[i][j] == 'w')  srcTile = { 99, 224, 140 - 99, 255 - 224 };
 
-				if (TileMap[i][j] == 'r')  tile.setTextureRect(IntRect(143 - 32, 112, 16, 16));
+				if (TileMap[i][j] == 'r')  srcTile = { 143 - 32, 112, 16, 16 };
 
 				if ((TileMap[i][j] == ' ') || (TileMap[i][j] == '0')) continue;
 
-				tile.setPosition(j * 16 - offsetX, i * 16 - offsetY);
-				window.draw(tile);
-			}*/
+				destTile = {(int) (j * 16 - offsetX), (int) (i * 16 - offsetY), 16, 16 };
+				SDL_SetTextureAlphaMod(tile, 255);
+				SDL_RenderCopyEx(g_pRenderer, tile, &srcTile, &destTile, 0.0, 0, SDL_FLIP_NONE); //Load current frame on the buffer game.
+			}
+
+		//drawing test
+		//SDL_Rect srcRect; //source rectangle
+		//SDL_Rect destRect; //destination rectangle
+
+		//srcRect.x = 0;
+		//srcRect.y = 0;
+		//srcRect.w = 400;
+		//destRect.w = 400;
+		//srcRect.h = 250;
+		//destRect.h = 250;
+		//destRect.x = 0;
+		//destRect.y = 0;
+
+		//SDL_SetTextureAlphaMod(Mario.sprite, 255);
+		//SDL_RenderCopyEx(g_pRenderer, Mario.sprite, &srcRect, &destRect, 0.0, 0, SDL_FLIP_NONE); //Load current frame on the buffer game.
+		//end drawing test
 
 		//draw Mario
-		drawFrameScl(Mario.sprite, Mario.imgRect.x, Mario.imgRect.y, Mario.imgRect.w, Mario.imgRect.h, Mario.rect.w, Mario.rect.h, 0, 0, g_pRenderer, 0.0, 255, SDL_FLIP_NONE);
+		SDL_Rect srcMario; //source rectangle
+		SDL_Rect destMario; //destination rectangle
+
+		srcMario.x = Mario.imgRect.x;
+		srcMario.y = Mario.imgRect.y;
+		srcMario.w = 16;
+		destMario.w = 16;
+		srcMario.h = 16;
+		destMario.h = 16;
+		destMario.x = Mario.rect.x;
+		destMario.y = Mario.rect.y;
+
+		SDL_SetTextureAlphaMod(Mario.sprite, 255);
+		SDL_RenderCopyEx(g_pRenderer, Mario.sprite, &srcMario, &destMario, 0.0, 0, Mario.flip == false ? SDL_FLIP_NONE : SDL_FLIP_HORIZONTAL); //Load current frame on the buffer game.
 
 		//draw Enemy
-		drawFrameScl(enemy.sprite, enemy.imgRect.x, enemy.imgRect.y, enemy.imgRect.w, enemy.imgRect.h, enemy.rect.w, enemy.rect.h, 0, 0, g_pRenderer, 0.0, 255, SDL_FLIP_NONE);
+		//drawFrameScl(enemy.sprite, enemy.imgRect.x, enemy.imgRect.y, enemy.imgRect.w, enemy.imgRect.h, enemy.rect.w, enemy.rect.h, 0, 0, g_pRenderer, 0.0, 255, SDL_FLIP_NONE);
 
 		SDL_RenderPresent(g_pRenderer); // draw to the screen
 
