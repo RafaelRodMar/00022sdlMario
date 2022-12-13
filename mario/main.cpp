@@ -168,8 +168,8 @@ public:
 		if (dx < 0) flip = true;
 		if (dx == 0) imgRect = { 80, 144, 16, 16 };
 
-		rect.x = rect.x - offsetX;
-		rect.y = rect.y - offsetY;
+		//rect.x = rect.x - offsetX;
+		//rect.y = rect.y - offsetY;
 
 		dx = 0;
 	}
