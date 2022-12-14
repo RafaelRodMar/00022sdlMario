@@ -130,10 +130,11 @@ class PLAYER {
 public:
 
 	float dx, dy;
-	SDL_FRect rect; //position of the sprite
+	SDL_FRect rect;  //position on map
 	bool onGround;
 	SDL_Texture* sprite;
 	SDL_FRect imgRect; //source of the image
+	SDL_Rect imgPos;   //position of the image (screen)
 	float currentFrame;
 	bool flip = false;
 
@@ -168,8 +169,8 @@ public:
 		if (dx < 0) flip = true;
 		if (dx == 0) imgRect = { 80, 144, 16, 16 };
 
-		//rect.x = rect.x - offsetX;
-		//rect.y = rect.y - offsetY;
+		imgPos.x = rect.x - offsetX;
+		imgPos.y = rect.y - offsetY;
 
 		dx = 0;
 	}
@@ -322,11 +323,11 @@ int main(int argc, char* args[])
 	SDL_Texture* tile = loadTexture("mario_tileset.png", g_pRenderer);
 
 	//music and sound
-	Mix_OpenAudio(22050, AUDIO_S16, 2, (4096 / 2));
-	Mix_Volume(-1, 16); //adjust sound/music volume for all channels
-	Mix_Music* music = loadMusic("Mario_Theme.ogg");
-	Mix_PlayMusic(music, 1);
-	Mix_Chunk* jumpSound = loadSound("Jump.wav");
+	//Mix_OpenAudio(22050, AUDIO_S16, 2, (4096 / 2));
+	//Mix_Volume(-1, 16); //adjust sound/music volume for all channels
+	//Mix_Music* music = loadMusic("Mario_Theme.ogg");
+	//Mix_PlayMusic(music, 1);
+	//Mix_Chunk* jumpSound = loadSound("Jump.wav");
 	
 	srand(time(NULL));
 
@@ -367,7 +368,7 @@ int main(int argc, char* args[])
 			{
 				Mario.dy = -0.27;
 				Mario.onGround = false;
-				Mix_PlayChannel(-1, jumpSound, 0);
+				//Mix_PlayChannel(-1, jumpSound, 0);
 			}
 		}
 
@@ -461,8 +462,8 @@ int main(int argc, char* args[])
 		destMario.w = 16;
 		srcMario.h = 16;
 		destMario.h = 16;
-		destMario.x = Mario.rect.x;
-		destMario.y = Mario.rect.y;
+		destMario.x = Mario.imgPos.x;
+		destMario.y = Mario.imgPos.y;
 
 		SDL_SetTextureAlphaMod(Mario.sprite, 255);
 		SDL_RenderCopyEx(g_pRenderer, Mario.sprite, &srcMario, &destMario, 0.0, 0, Mario.flip == false ? SDL_FLIP_NONE : SDL_FLIP_HORIZONTAL); //Load current frame on the buffer game.
@@ -484,7 +485,7 @@ int main(int argc, char* args[])
 	}
 	
 	std::cout << "game closing...\n";
-	Mix_CloseAudio();
+	//Mix_CloseAudio();
 
 	return 0;
 }
