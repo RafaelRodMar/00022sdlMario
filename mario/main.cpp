@@ -218,8 +218,10 @@ public:
 	SDL_FRect rect;
 	SDL_Texture* sprite;
 	SDL_FRect imgRect;
+	SDL_Rect imgPos;
 	float currentFrame;
 	bool life;
+	bool flip = false;
 
 
 	void set(std::string image, int x, int y)
@@ -240,13 +242,13 @@ public:
 
 
 		currentFrame += time * 0.005;
-		if (currentFrame > 2) currentFrame -= 2;
+		if (currentFrame >= 2) currentFrame -= 2;
 
 		imgRect = { (float)18 * int(currentFrame), (float)0, (float)16, 16.0 };
 		if (!life) imgRect = { 58, 0, 16, 16 };
 
-		rect.x = rect.x - offsetX;
-		rect.y = rect.y - offsetY;
+		imgPos.x = rect.x - offsetX;
+		imgPos.y = rect.y - offsetY;
 
 	}
 
@@ -323,11 +325,12 @@ int main(int argc, char* args[])
 	SDL_Texture* tile = loadTexture("mario_tileset.png", g_pRenderer);
 
 	//music and sound
-	//Mix_OpenAudio(22050, AUDIO_S16, 2, (4096 / 2));
-	//Mix_Volume(-1, 16); //adjust sound/music volume for all channels
-	//Mix_Music* music = loadMusic("Mario_Theme.ogg");
-	//Mix_PlayMusic(music, 1);
-	//Mix_Chunk* jumpSound = loadSound("Jump.wav");
+	Mix_OpenAudio(22050, AUDIO_S16, 2, (4096 / 2));
+	Mix_Music* music = loadMusic("Mario_Theme.ogg");
+	Mix_Volume(-1, 16); //adjust sound/music volume for all channels
+	Mix_VolumeMusic(16);
+	Mix_PlayMusic(music, 1);
+	Mix_Chunk* jumpSound = loadSound("Jump.wav");
 	
 	srand(time(NULL));
 
@@ -368,14 +371,14 @@ int main(int argc, char* args[])
 			{
 				Mario.dy = -0.27;
 				Mario.onGround = false;
-				//Mix_PlayChannel(-1, jumpSound, 0);
+				Mix_PlayChannel(-1, jumpSound, 0);
 			}
 		}
 
 
 		//update
-		Mario.update(20);
-		enemy.update(20);
+		Mario.update(25);
+		enemy.update(25);
 
 		SDL_Rect iMarioRect;
 		iMarioRect.x = Mario.rect.x;
@@ -469,7 +472,20 @@ int main(int argc, char* args[])
 		SDL_RenderCopyEx(g_pRenderer, Mario.sprite, &srcMario, &destMario, 0.0, 0, Mario.flip == false ? SDL_FLIP_NONE : SDL_FLIP_HORIZONTAL); //Load current frame on the buffer game.
 
 		//draw Enemy
-		//drawFrameScl(enemy.sprite, enemy.imgRect.x, enemy.imgRect.y, enemy.imgRect.w, enemy.imgRect.h, enemy.rect.w, enemy.rect.h, 0, 0, g_pRenderer, 0.0, 255, SDL_FLIP_NONE);
+		SDL_Rect srcEnemy; //source rectangle
+		SDL_Rect destEnemy; //destination rectangle
+
+		srcEnemy.x = enemy.imgRect.x;
+		srcEnemy.y = enemy.imgRect.y;
+		srcEnemy.w = 16;
+		destEnemy.w = 16;
+		srcEnemy.h = 16;
+		destEnemy.h = 16;
+		destEnemy.x = enemy.imgPos.x;
+		destEnemy.y = enemy.imgPos.y;
+
+		SDL_SetTextureAlphaMod(enemy.sprite, 255);
+		SDL_RenderCopyEx(g_pRenderer, enemy.sprite, &srcEnemy, &destEnemy, 0.0, 0, enemy.flip == false ? SDL_FLIP_NONE : SDL_FLIP_HORIZONTAL); //Load current frame on the buffer game.
 
 		SDL_RenderPresent(g_pRenderer); // draw to the screen
 
@@ -485,7 +501,7 @@ int main(int argc, char* args[])
 	}
 	
 	std::cout << "game closing...\n";
-	//Mix_CloseAudio();
+	Mix_CloseAudio();
 
 	return 0;
 }
