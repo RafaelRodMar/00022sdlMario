@@ -502,6 +502,11 @@ int main(int argc, char* args[])
 	
 	std::cout << "game closing...\n";
 	Mix_CloseAudio();
+	SDL_DestroyTexture(Mario.sprite);
+	SDL_DestroyTexture(enemy.sprite);
+	SDL_DestroyTexture(tile);
+	Mix_FreeMusic(music);
+	Mix_FreeChunk(jumpSound);
 
 	return 0;
 }
