@@ -31,19 +31,19 @@ SDL_Texture* loadTexture(std::string fileName, SDL_Renderer* pRenderer)
 	return pTexture; //save texture.
 }
 
-void drawFrameScl(SDL_Texture* textureMap, int x, int y, int srcWidth, int srcHeight, int destWidth, int destHeight, SDL_Renderer *pRenderer, double angle, int alpha, SDL_RendererFlip flip)
+void drawFrameScl(SDL_Texture* textureMap, int sourceX, int sourceY, int Width, int Height, int destX, int destY, SDL_Renderer *pRenderer, double angle, int alpha, SDL_RendererFlip flip)
 {
 	SDL_Rect srcRect; //source rectangle
 	SDL_Rect destRect; //destination rectangle
 
-	srcRect.x = srcWidth;
-	srcRect.y = srcHeight;
-	srcRect.w = srcWidth;
-	destRect.w = destWidth;
-	srcRect.h = srcHeight;
-	destRect.h = destHeight;
-	destRect.x = x;
-	destRect.y = y;
+	srcRect.x = sourceX;
+	srcRect.y = sourceY;
+	srcRect.w = Width;
+	srcRect.h = Height;
+	destRect.x = destX;
+	destRect.y = destY;
+	destRect.w = Width;
+	destRect.h = Height;
 
 	SDL_SetTextureAlphaMod(textureMap, alpha);
 	SDL_RenderCopyEx(pRenderer, textureMap, &srcRect, &destRect, angle, 0, flip); //Load current frame on the buffer game.
@@ -438,54 +438,11 @@ int main(int argc, char* args[])
 				SDL_RenderCopyEx(g_pRenderer, tile, &srcTile, &destTile, 0.0, 0, SDL_FLIP_NONE); //Load current frame on the buffer game.
 			}
 
-		//drawing test
-		//SDL_Rect srcRect; //source rectangle
-		//SDL_Rect destRect; //destination rectangle
-
-		//srcRect.x = 0;
-		//srcRect.y = 0;
-		//srcRect.w = 400;
-		//destRect.w = 400;
-		//srcRect.h = 250;
-		//destRect.h = 250;
-		//destRect.x = 0;
-		//destRect.y = 0;
-
-		//SDL_SetTextureAlphaMod(Mario.sprite, 255);
-		//SDL_RenderCopyEx(g_pRenderer, Mario.sprite, &srcRect, &destRect, 0.0, 0, SDL_FLIP_NONE); //Load current frame on the buffer game.
-		//end drawing test
-
 		//draw Mario
-		SDL_Rect srcMario; //source rectangle
-		SDL_Rect destMario; //destination rectangle
-
-		srcMario.x = Mario.imgRect.x;
-		srcMario.y = Mario.imgRect.y;
-		srcMario.w = 16;
-		destMario.w = 16;
-		srcMario.h = 16;
-		destMario.h = 16;
-		destMario.x = Mario.imgPos.x;
-		destMario.y = Mario.imgPos.y;
-
-		SDL_SetTextureAlphaMod(Mario.sprite, 255);
-		SDL_RenderCopyEx(g_pRenderer, Mario.sprite, &srcMario, &destMario, 0.0, 0, Mario.flip == false ? SDL_FLIP_NONE : SDL_FLIP_HORIZONTAL); //Load current frame on the buffer game.
+		drawFrameScl(Mario.sprite, Mario.imgRect.x, Mario.imgRect.y, 16, 16, Mario.imgPos.x, Mario.imgPos.y, g_pRenderer, 0.0, 255, Mario.flip == false ? SDL_FLIP_NONE : SDL_FLIP_HORIZONTAL);
 
 		//draw Enemy
-		SDL_Rect srcEnemy; //source rectangle
-		SDL_Rect destEnemy; //destination rectangle
-
-		srcEnemy.x = enemy.imgRect.x;
-		srcEnemy.y = enemy.imgRect.y;
-		srcEnemy.w = 16;
-		destEnemy.w = 16;
-		srcEnemy.h = 16;
-		destEnemy.h = 16;
-		destEnemy.x = enemy.imgPos.x;
-		destEnemy.y = enemy.imgPos.y;
-
-		SDL_SetTextureAlphaMod(enemy.sprite, 255);
-		SDL_RenderCopyEx(g_pRenderer, enemy.sprite, &srcEnemy, &destEnemy, 0.0, 0, enemy.flip == false ? SDL_FLIP_NONE : SDL_FLIP_HORIZONTAL); //Load current frame on the buffer game.
+		drawFrameScl(enemy.sprite, enemy.imgRect.x, enemy.imgRect.y, 16, 16, enemy.imgPos.x, enemy.imgPos.y, g_pRenderer, 0.0, 255, SDL_FLIP_NONE);
 
 		SDL_RenderPresent(g_pRenderer); // draw to the screen
 
